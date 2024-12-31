@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation System</title>
+</head>
+<body>
+    <h1>Welcome to the Recommendation System</h1>
+    <!-- Consent Section -->
+    {% if not consent_given %}
+        <form method="post" action="">
+            {% csrf_token %}
+            <p>This project collects data for recommendation modeling purposes. Do you consent to participate?</p>
+            <button type="submit" name="consent" value="yes">I Consent</button>
+            <button type="submit" name="consent" value="no">I Do Not Consent</button>
+        </form>
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+    {% else %}
+        <!-- Recommendation Form Section -->
+        <h2>Select Category</h2>
+        <form method="post" action="">
+            {% csrf_token %}
+            <select name="category" required>
+                <option value="">-- Select Category --</option>
+                {% for cat in categories %}
+                    <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+
+            <h2>Select Base Type</h2>
+            <select name="base_type" required>
+                <option value="">-- Select Base Type --</option>
+                {% for base in base_types %}
+                    <option value="{{ base }}" {% if base_type == base %}selected{% endif %}>{{ base }}</option>
+                {% endfor %}
+            </select>
+
+            <h2>Select Flavor Tags</h2>
+            {% for tag in flavor_tags %}
+                <label>
+                    <input type="checkbox" name="tags" value="{{ tag }}" 
+                           {% if tag in selected_tags %}checked{% endif %}>
+                    {{ tag }}
+                </label>
+            {% endfor %}
+
+            <button type="submit">Get Recommendations</button>
+        </form>
+
+        <!-- Recommendation Results Section -->
+        {% if recommendations %}
+            <h2>Recommendations</h2>
+            <ul>
+                {% for rec in recommendations %}
+                    <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+            <!-- Feedback Form -->
+            <h2>Submit Feedback</h2>
+            <form method="post" action="/submit_feedback/">
+                {% csrf_token %}
+                {% for rec in recommendations %}
+                    <p>{{ rec }}</p>
+                    <label>Rating:
+                        <input type="number" name="rating_{{ forloop.counter }}" min="0" max="5">
+                    </label>
+                    <label>
+                        <input type="checkbox" name="purchased_{{ forloop.counter }}"> Purchased
+                    </label>
+                    <input type="hidden" name="recommendation_{{ forloop.counter }}" value="{{ rec }}">
+                {% endfor %}
+                <button type="submit">Submit Feedback</button>
+            </form>
+        {% elif error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

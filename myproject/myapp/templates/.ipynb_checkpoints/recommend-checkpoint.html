@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flavor Tag Recommendation</title>
+</head>
+<body>
+    <h1>Flavor Tag Selection</h1>
+    <form method="POST" action="">
+        {% csrf_token %}
+        <label for="base_type">Select Base Type:</label>
+        <select name="base_type" id="base_type">
+            {% for base in base_types %}
+                <option value="{{ base }}" {% if base == base_type %}selected{% endif %}>{{ base }}</option>
+            {% endfor %}
+        </select>
+        <h3>Select Flavor Tags:</h3>
+        {% for tag in flavor_tags %}
+            <input type="checkbox" name="tags" value="{{ tag }}" id="{{ tag }}" 
+                   {% if tag in selected_tags %}checked{% endif %}>
+            <label for="{{ tag }}">{{ tag }}</label><br>
+        {% endfor %}
+        <button type="submit">Get Recommendations</button>
+    </form>
+
+    {% if recommendations is not None %}
+        <h2>Recommendations</h2>
+        {% if recommendations %}
+            <ul>
+                {% for recommendation in recommendations %}
+                    <li>{{ recommendation }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p style="color: red;">No matching drinks found. Try different tags.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

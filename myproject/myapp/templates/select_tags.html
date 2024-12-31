@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Flavor Tags</title>
+    <style>
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .tag {
+            margin: 5px;
+        }
+
+        .submit-button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flavor Tag Selection</h1>
+    <form method="POST" action="/drinks/recommend/" class="form-container">
+        {% csrf_token %}
+        <label for="base_type">Select Base Type:</label>
+        <select name="base_type" id="base_type">
+            {% for base in base_types %}
+                <option value="{{ base }}">{{ base }}</option>
+            {% endfor %}
+        </select>
+        <div class="tags-container">
+            {% for tag in flavor_tags %}
+                <div class="tag">
+                    <input type="checkbox" name="tags" value="{{ tag }}" id="{{ tag }}">
+                    <label for="{{ tag }}">{{ tag }}</label>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="submit-button">Get Recommendations</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<form method="post" action="/consent">
+    {% csrf_token %}
+    <p>We would like to explicitly state that this project is solely for the purpose of collecting data related to recommendation modeling for educational purposes. </p>
+    <p>Do you agree to participate in this project?</p>
+    <button type="submit" name="consent" value="yes">Yes</button>
+    <button type="submit" name="consent" value="no">No</button>
+</form>

@@ -1,0 +1,10 @@
+<form method="post" action="/submit_feedback">
+    {% csrf_token %}
+    {% for item in recommendations %}
+        <p>{{ item }}</p>
+        <input type="number" name="rating_{{ forloop.counter }}" min="0" max="5">
+        <label>구매 여부</label>
+        <input type="checkbox" name="purchased_{{ forloop.counter }}">
+    {% endfor %}
+    <button type="submit">Submit Feedback</button>
+</form>

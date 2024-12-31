@@ -1,0 +1,6 @@
+<h1>Drink List</h1>
+<ul>
+    {% for drink in drinks %}
+        <li><strong>{{ drink.name }}</strong>: {{ drink.flavor_tags }}</li>
+    {% endfor %}
+</ul>
