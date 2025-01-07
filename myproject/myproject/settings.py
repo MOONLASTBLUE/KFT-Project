@@ -75,14 +75,25 @@ WSGI_APPLICATION = "myproject.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.mysql",
+#         "NAME": "recommendation_system",
+#         "USER": "django_user",
+#         'PASSWORD': "skdiamm1",
+#         "HOST": "localhost",
+#         "PORT": "3306",
+#     }
+# }
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "recommendation_system",
-        "USER": "django_user",
-        'PASSWORD': "skdiamm1",
-        "HOST": "localhost",
-        "PORT": "3306",
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'moonlastblue',  # Google Cloud SQL에서 생성한 데이터베이스 이름
+        'USER': 'root',                # Google Cloud SQL 사용자 이름
+        'PASSWORD': 'skdiamm1',   # 비밀번호
+        'HOST': '34.121.73.119',           # 로컬 머신의 IP (Cloud SQL Proxy 사용 시)
+        'PORT': '3306',              
     }
 }
 
