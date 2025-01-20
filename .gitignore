@@ -6,5 +6,3 @@ __pycache__/
 *.DS_Store
 *.sqlite3
 *.csv
-
-myproject/

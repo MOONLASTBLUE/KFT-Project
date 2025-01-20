@@ -1,68 +1,63 @@
 from django.shortcuts import render, redirect
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from myapp.models import User, Drink, Feedback
+from myapp.models import User, Feedback
 import pandas as pd
 import uuid
 from django.utils import timezone
-
+from django.views.decorators.csrf import csrf_protect
 
 def load_data():
     dataset = pd.read_csv('KFT Dataset_modified.csv')
-    dataset['Flavor Tags'] = dataset['Flavor Tags'].fillna('').apply(lambda x: ', '.join(set(x.split(', '))))
+    dataset['Flavor Tags'] = dataset['Flavor Tags'].fillna('')
+    dataset['Base Type'] = dataset['Base Type'].fillna('')
+
+    def process_base_type(base_type):
+        items = [item.strip() for item in base_type.split(',')]
+        return ', '.join(sorted(set(items)))
+    dataset['Base Type'] = dataset['Base Type'].apply(process_base_type)
+
+    dataset['Combined Features'] = dataset['Flavor Tags'] + ' ' + dataset['Base Type'].str.replace(',', ' ')
     return dataset
 
 
-def save_user_data(user_id, category, base_type, selected_tags, recommendations, feedback):
+def save_user_data(user_id, category, base_type, selected_tags, recommendations):
     user, created = User.objects.get_or_create(user_id=user_id)
-
-    for rec, fb in zip(recommendations, feedback):
+    for rec in recommendations:
         Feedback.objects.create(
             user=user,
             category=category,
             base_type=base_type,
             selected_tags=selected_tags,
             recommendation=rec,
-            # add timezone now
-            created_at=timezone.now(),  
+            created_at=timezone.now(),
         )
     return "Data saved successfully!"
 
-
-# def save_user_data(user_id, category, base_type, selected_tags, recommendations, feedback):
-#     df = pd.DataFrame({
-#         'UserID': [user_id] * len(recommendations),
-#         'Category': [category] * len(recommendations),
-#         'BaseType': [base_type] * len(recommendations),
-#         'SelectedTags': [', '.join(selected_tags)] * len(recommendations),
-#         'Recommendation': recommendations,
-#         'Feedback': feedback,
-#     })
-#     df.to_csv('user_data.csv', mode='a', index=False, header=False)
-
-# Content-Based Filtering
 def content_based_recommend(selected_tags, dataset, base_type, threshold=0.3):
-    filtered_dataset = dataset[dataset['Base Type'] == base_type]
-    if filtered_dataset.empty:
-        return [], False
-
+    # Base Type을 분리 -> 리스트로 만듦
+    base_type_list = base_type.split(', ')
+    
     vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(filtered_dataset['Flavor Tags'])
-    query_vector = vectorizer.transform([', '.join(selected_tags)])
+    tfidf_matrix = vectorizer.fit_transform(dataset['Combined Features'])
+    query_vector = vectorizer.transform([', '.join(selected_tags + base_type_list)])
+
     similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
 
+    # 유사도가 기준치를 초과 -> 추천 항목 선택
     top_indices = [i for i, sim in enumerate(similarities) if sim >= threshold]
-    recommendations = filtered_dataset.iloc[top_indices]['Menu'].tolist() if top_indices else []
+    recommendations = dataset.iloc[top_indices]['Menu'].tolist() if top_indices else []
     return recommendations, bool(recommendations)
 
-# 메인 페이지
+@csrf_protect
 def main_view(request):
     dataset = load_data()
     categories = dataset['Category'].unique()
-    base_types = dataset['Base Type'].unique()
+    
+    # Base Type 값을 쉼표로 분리한 후 유니크 값으로 변환
+    base_types = sorted(set(', '.join(dataset['Base Type']).split(', ')))
     flavor_tags = sorted(set(', '.join(dataset['Flavor Tags']).split(', ')))
 
-    # 동의 체크 ㅠㅠ 근데 안뜸..
     consent_given = request.session.get("consent_given", False)
 
     if not consent_given:
@@ -73,15 +68,8 @@ def main_view(request):
             else:
                 return render(request, "main.html", {"error": "You must provide consent to proceed."})
 
-        return render(
-            request,
-            "main.html",
-            {
-                "consent_given": False,
-            },
-        )
+        return render(request, "main.html", {"consent_given": False})
 
-    # POST 
     if request.method == "POST":
         user_id = request.POST.get("user_id", str(uuid.uuid4())[:8])
         category = request.POST.get("category")
@@ -90,7 +78,6 @@ def main_view(request):
         recommendations = []
         error_message = None
 
-        # Recommedation
         if selected_tags and base_type:
             recommendations, has_recommendation = content_based_recommend(selected_tags, dataset, base_type)
             if not has_recommendation:
@@ -98,10 +85,9 @@ def main_view(request):
         else:
             error_message = "Please select a category, base type, and at least one flavor tag."
 
-        # User Data
-        save_user_data(user_id, category, base_type, selected_tags, recommendations, feedback=[""] * len(recommendations))
+        if recommendations:
+            save_user_data(user_id, category, base_type, selected_tags, recommendations)
 
-        # Page Rendering
         return render(
             request,
             "main.html",
@@ -119,7 +105,6 @@ def main_view(request):
             },
         )
 
-    # GET: Main Page Redering
     return render(
         request,
         "main.html",
@@ -132,13 +117,13 @@ def main_view(request):
             "category": None,
             "base_type": None,
             "error": None,
-            # get random user ID
-            "user_id": str(uuid.uuid4())[:8],  
+            "user_id": str(uuid.uuid4())[:8],
             "consent_given": True,
         },
     )
 
-# save and submit feedbacks
+
+@csrf_protect
 def submit_feedback(request):
     if request.method == "POST":
         user_id = request.POST.get("user_id")
