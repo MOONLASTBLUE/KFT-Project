@@ -20,7 +20,6 @@ def load_data():
     dataset['Combined Features'] = dataset['Flavor Tags'] + ' ' + dataset['Base Type'].str.replace(',', ' ')
     return dataset
 
-
 def save_user_data(user_id, category, base_type, selected_tags, recommendations):
     user, created = User.objects.get_or_create(user_id=user_id)
     for rec in recommendations:
@@ -34,20 +33,32 @@ def save_user_data(user_id, category, base_type, selected_tags, recommendations)
         )
     return "Data saved successfully!"
 
-def content_based_recommend(selected_tags, dataset, base_type, threshold=0.3):
+
+def content_based_recommend(selected_tags, dataset, base_type, preferences, threshold=0.3):
     # Base Type을 분리 -> 리스트로 만듦
     base_type_list = base_type.split(', ')
-    
+
+    for column, value in preferences.items():
+        if value == "Yes":
+            dataset = dataset[dataset[column] == "Yes"]
+
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(dataset['Combined Features'])
     query_vector = vectorizer.transform([', '.join(selected_tags + base_type_list)])
 
     similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
 
+    # 유사도 점수:  데이터프레임에 추가
+    dataset = dataset.copy()  # 원본 데이터프레임 보호하기 위함임
+    dataset['Similarity Score'] = similarities
+
     # 유사도가 기준치를 초과 -> 추천 항목 선택
     top_indices = [i for i, sim in enumerate(similarities) if sim >= threshold]
-    recommendations = dataset.iloc[top_indices]['Menu'].tolist() if top_indices else []
+
+    # 상위 5개의 추천 결과만 반환
+    recommendations = dataset.iloc[top_indices].nlargest(5, 'Similarity Score')['Menu'].tolist() if top_indices else []
     return recommendations, bool(recommendations)
+
 
 @csrf_protect
 def main_view(request):
@@ -57,6 +68,16 @@ def main_view(request):
     # Base Type 값을 쉼표로 분리한 후 유니크 값으로 변환
     base_types = sorted(set(', '.join(dataset['Base Type']).split(', ')))
     flavor_tags = sorted(set(', '.join(dataset['Flavor Tags']).split(', ')))
+
+    # 추가된 Yes/No 필터 컬럼들
+    preference_columns = [
+        "Customizable Sweetness",
+        "Contains Caffeine",
+        "Contains Gluten",
+        "Oat Milk Substitution",
+        "Vegan-friendly",
+        "Contains dairy"
+    ]
 
     consent_given = request.session.get("consent_given", False)
 
@@ -78,8 +99,11 @@ def main_view(request):
         recommendations = []
         error_message = None
 
+        # 유저가 선택한 Yes/No 옵션 수집
+        preferences = {col: request.POST.get(col) for col in preference_columns}
+
         if selected_tags and base_type:
-            recommendations, has_recommendation = content_based_recommend(selected_tags, dataset, base_type)
+            recommendations, has_recommendation = content_based_recommend(selected_tags, dataset, base_type, preferences)
             if not has_recommendation:
                 error_message = "No matching drinks found. Try different tags."
         else:
@@ -102,6 +126,8 @@ def main_view(request):
                 "error": error_message,
                 "user_id": user_id,
                 "consent_given": True,
+                "preferences": preferences,
+                "preference_columns": preference_columns,
             },
         )
 
@@ -119,9 +145,10 @@ def main_view(request):
             "error": None,
             "user_id": str(uuid.uuid4())[:8],
             "consent_given": True,
+            "preferences": {col: "No" for col in preference_columns},  # 초기값
+            "preference_columns": preference_columns,
         },
     )
-
 
 @csrf_protect
 def submit_feedback(request):

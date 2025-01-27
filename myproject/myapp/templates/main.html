@@ -20,9 +20,11 @@
         {% endif %}
     {% else %}
         <!-- Recommendation Form Section -->
-        <h2>Select Category</h2>
         <form method="post" action="">
             {% csrf_token %}
+
+            <!-- Category Selection -->
+            <h2>Select Category</h2>
             <select name="category" required>
                 <option value="">-- Select Category --</option>
                 {% for cat in categories %}
@@ -30,6 +32,7 @@
                 {% endfor %}
             </select>
 
+            <!-- Base Type Selection -->
             <h2>Select Base Type</h2>
             <select name="base_type" required>
                 <option value="">-- Select Base Type --</option>
@@ -38,13 +41,24 @@
                 {% endfor %}
             </select>
 
+            <!-- Flavor Tags Selection -->
             <h2>Select Flavor Tags</h2>
             {% for tag in flavor_tags %}
                 <label>
-                    <input type="checkbox" name="tags" value="{{ tag }}" 
-                           {% if tag in selected_tags %}checked{% endif %}>
+                    <input type="checkbox" name="tags" value="{{ tag }}" {% if tag in selected_tags %}checked{% endif %}>
                     {{ tag }}
                 </label>
+            {% endfor %}
+
+            <!-- Additional Preferences Section -->
+            <h2>Additional Preferences</h2>
+            {% for column, value in preferences.items %}
+                <label>{{ column }}:</label>
+                <select name="preferences_{{ column }}">
+                    <option value="Yes" {% if value == "Yes" %}selected{% endif %}>Yes</option>
+                    <option value="No" {% if value == "No" %}selected{% endif %}>No</option>
+                </select>
+                <br>
             {% endfor %}
 
             <button type="submit">Get Recommendations</button>
