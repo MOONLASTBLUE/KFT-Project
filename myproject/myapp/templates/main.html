@@ -4,13 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recommendation System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+        form {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        select, input[type="checkbox"], input[type="number"] {
+            padding: 5px;
+            margin: 5px 0;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .recommendations {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+        .recommendation-item {
+            background-color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+        }
+        .feedback-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .feedback-table th, .feedback-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .feedback-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
     <h1>Welcome to the Recommendation System</h1>
-    <!-- Consent Section -->
+
+    <!-- Consent Section (맨 위에 배치) -->
     {% if not consent_given %}
         <form method="post" action="">
             {% csrf_token %}
+            <h2>Consent Required</h2>
             <p>This project collects data for recommendation modeling purposes. Do you consent to participate?</p>
             <button type="submit" name="consent" value="yes">I Consent</button>
             <button type="submit" name="consent" value="no">I Do Not Consent</button>
@@ -23,7 +87,6 @@
         <form method="post" action="">
             {% csrf_token %}
 
-            <!-- Category Selection -->
             <h2>Select Category</h2>
             <select name="category" required>
                 <option value="">-- Select Category --</option>
@@ -32,7 +95,6 @@
                 {% endfor %}
             </select>
 
-            <!-- Base Type Selection -->
             <h2>Select Base Type</h2>
             <select name="base_type" required>
                 <option value="">-- Select Base Type --</option>
@@ -41,16 +103,16 @@
                 {% endfor %}
             </select>
 
-            <!-- Flavor Tags Selection -->
             <h2>Select Flavor Tags</h2>
-            {% for tag in flavor_tags %}
-                <label>
-                    <input type="checkbox" name="tags" value="{{ tag }}" {% if tag in selected_tags %}checked{% endif %}>
-                    {{ tag }}
-                </label>
-            {% endfor %}
+            <div>
+                {% for tag in flavor_tags %}
+                    <label>
+                        <input type="checkbox" name="tags" value="{{ tag }}" {% if tag in selected_tags %}checked{% endif %}>
+                        {{ tag }}
+                    </label>
+                {% endfor %}
+            </div>
 
-            <!-- Additional Preferences Section -->
             <h2>Additional Preferences</h2>
             {% for column, value in preferences.items %}
                 <label>{{ column }}:</label>
@@ -64,28 +126,38 @@
             <button type="submit">Get Recommendations</button>
         </form>
 
-        <!-- Recommendation Results Section -->
         {% if recommendations %}
             <h2>Recommendations</h2>
-            <ul>
+            <div class="recommendations">
                 {% for rec in recommendations %}
-                    <li>{{ rec }}</li>
+                    <div class="recommendation-item">
+                        <strong>{{ rec }}</strong>
+                    </div>
                 {% endfor %}
-            </ul>
-            <!-- Feedback Form -->
+            </div>
+
             <h2>Submit Feedback</h2>
             <form method="post" action="/submit_feedback/">
                 {% csrf_token %}
-                {% for rec in recommendations %}
-                    <p>{{ rec }}</p>
-                    <label>Rating:
-                        <input type="number" name="rating_{{ forloop.counter }}" min="0" max="5">
-                    </label>
-                    <label>
-                        <input type="checkbox" name="purchased_{{ forloop.counter }}"> Purchased
-                    </label>
-                    <input type="hidden" name="recommendation_{{ forloop.counter }}" value="{{ rec }}">
-                {% endfor %}
+                <table class="feedback-table">
+                    <tr>
+                        <th>Recommendation</th>
+                        <th>Rating</th>
+                        <th>Purchased</th>
+                    </tr>
+                    {% for rec in recommendations %}
+                        <tr>
+                            <td>{{ rec }}</td>
+                            <td>
+                                <input type="number" name="rating_{{ forloop.counter }}" min="0" max="5">
+                            </td>
+                            <td>
+                                <input type="checkbox" name="purchased_{{ forloop.counter }}">
+                            </td>
+                            <input type="hidden" name="recommendation_{{ forloop.counter }}" value="{{ rec }}">
+                        </tr>
+                    {% endfor %}
+                </table>
                 <button type="submit">Submit Feedback</button>
             </form>
         {% elif error %}
